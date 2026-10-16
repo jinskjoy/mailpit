@@ -532,6 +532,15 @@ export default {
 							Raw message
 						</a>
 					</li>
+					<li>
+						<a
+							:href="resolve('/api/v1/message/' + message.ID + '/eml')"
+							class="dropdown-item"
+							title="Download complete email as .eml file"
+						>
+							EML file
+						</a>
+					</li>
 					<li v-if="message.HTML">
 						<button class="dropdown-item" @click="downloadMessageBody(message.HTML, 'html')">
 							HTML body

@@ -991,3 +991,76 @@ func assertEqual(t *testing.T, a any, b any, message string) {
 	message = fmt.Sprintf("%s: \"%v\" != \"%v\"", message, a, b)
 	t.Fatal(message)
 }
+
+func TestDownloadEML(t *testing.T) {
+	setup()
+	defer storage.Close()
+
+	r := apiRoutes()
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	raw := []byte("From: sender@example.com\r\nTo: recipient@example.com\r\nSubject: Download EML Test\r\n\r\nTest body\r\n")
+	id, err := storage.Store(&raw, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 1. GET /api/v1/message/{id}/eml
+	resp, err := http.Get(ts.URL + "/api/v1/message/" + id + "/eml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	assertEqual(t, resp.StatusCode, http.StatusOK, "expected 200 OK")
+	assertEqual(t, resp.Header.Get("Content-Type"), "message/rfc822; charset=utf-8", "Content-Type header")
+	assertEqual(t, resp.Header.Get("Content-Disposition"), "attachment; filename=\""+id+".eml\"", "Content-Disposition header")
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertEqual(t, string(body), string(raw), "raw message content")
+
+	// 2. GET /api/v1/message/latest/eml
+	respLatest, err := http.Get(ts.URL + "/api/v1/message/latest/eml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer respLatest.Body.Close()
+
+	assertEqual(t, respLatest.StatusCode, http.StatusOK, "expected 200 OK for latest")
+	assertEqual(t, respLatest.Header.Get("Content-Type"), "message/rfc822; charset=utf-8", "Content-Type header for latest")
+	assertEqual(t, respLatest.Header.Get("Content-Disposition"), "attachment; filename=\""+id+".eml\"", "Content-Disposition header for latest")
+
+	// 3. GET /api/v1/message/{id}/raw?dl=1
+	respRawDl, err := http.Get(ts.URL + "/api/v1/message/" + id + "/raw?dl=1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer respRawDl.Body.Close()
+
+	assertEqual(t, respRawDl.StatusCode, http.StatusOK, "expected 200 OK for raw?dl=1")
+	assertEqual(t, respRawDl.Header.Get("Content-Type"), "message/rfc822; charset=utf-8", "Content-Type header for raw?dl=1")
+	assertEqual(t, respRawDl.Header.Get("Content-Disposition"), "attachment; filename=\""+id+".eml\"", "Content-Disposition header for raw?dl=1")
+
+	// 4. GET /api/v1/message/{id}/raw (without dl=1)
+	respRaw, err := http.Get(ts.URL + "/api/v1/message/" + id + "/raw")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer respRaw.Body.Close()
+
+	assertEqual(t, respRaw.StatusCode, http.StatusOK, "expected 200 OK for raw")
+	assertEqual(t, respRaw.Header.Get("Content-Type"), "text/plain; charset=utf-8", "Content-Type header for raw")
+	assertEqual(t, respRaw.Header.Get("Content-Disposition"), "", "Content-Disposition should be empty for raw without dl")
+
+	// 5. GET /api/v1/message/nonexistent/eml
+	resp404, err := http.Get(ts.URL + "/api/v1/message/nonexistent/eml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp404.Body.Close()
+	assertEqual(t, resp404.StatusCode, http.StatusNotFound, "expected 404 for nonexistent message")
+}

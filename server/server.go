@@ -232,6 +232,7 @@ func apiRoutes() *http.ServeMux {
 	r.HandleFunc("GET "+config.Webroot+"api/v1/message/{id}/part/{partID}/thumb", middleWareFunc(apiv1.Thumbnail))
 	r.HandleFunc("GET "+config.Webroot+"api/v1/message/{id}/headers", middleWareFunc(apiv1.GetHeaders))
 	r.HandleFunc("GET "+config.Webroot+"api/v1/message/{id}/raw", middleWareFunc(apiv1.DownloadRaw))
+	r.HandleFunc("GET "+config.Webroot+"api/v1/message/{id}/eml", middleWareFunc(apiv1.DownloadEML))
 	r.HandleFunc("POST "+config.Webroot+"api/v1/message/{id}/release", middleWareFunc(apiv1.ReleaseMessage))
 	r.HandleFunc("GET "+config.Webroot+"api/v1/message/{id}/html-check", middleWareFunc(apiv1.HTMLCheck))
 	r.HandleFunc("GET "+config.Webroot+"api/v1/message/{id}/link-check", middleWareFunc(apiv1.LinkCheck))

@@ -358,6 +358,42 @@
             "$ref": "#/responses/ErrorResponse"
           }
         }
+      },
+    "/api/v1/message/{ID}/eml": {
+      "get": {
+        "description": "Returns the full email source as a downloadable .eml file.\n\nThe ID can be set to `latest` to return the latest message.",
+        "produces": [
+          "message/rfc822"
+        ],
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "message"
+        ],
+        "summary": "Download message as EML",
+        "operationId": "DownloadEMLParams",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Message database ID or \"latest\"",
+            "name": "ID",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/responses/TextResponse"
+          },
+          "400": {
+            "$ref": "#/responses/ErrorResponse"
+          },
+          "404": {
+            "$ref": "#/responses/NotFoundResponse"
+          }
+        }
       }
     },
     "/api/v1/message/{ID}/raw": {

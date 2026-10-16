@@ -169,6 +169,36 @@ func DownloadAttachment(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(a.Content) // #nosec G705 -- HTML/SVG/XML content types are forced to application/octet-stream above
 }
 
+// serveRaw serves the raw message source, optionally setting attachment headers for download
+func serveRaw(w http.ResponseWriter, r *http.Request, dl bool) {
+	id := r.PathValue("id")
+
+	if id == "latest" {
+		var err error
+		id, err = storage.LatestID(r)
+		if err != nil {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.WriteHeader(404)
+			_, _ = fmt.Fprint(w, err.Error()) // #nosec G705 -- served as text/plain
+			return
+		}
+	}
+
+	data, err := storage.GetMessageRaw(id)
+	if err != nil {
+		fourOFour(w)
+		return
+	}
+
+	if dl {
+		w.Header().Set("Content-Type", "message/rfc822; charset=utf-8")
+		w.Header().Set("Content-Disposition", "attachment; filename=\""+id+".eml\"")
+	} else {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	}
+	_, _ = w.Write(data) // #nosec G705 -- raw email source
+}
+
 // DownloadRaw (method: GET) returns the full email source as plain text
 func DownloadRaw(w http.ResponseWriter, r *http.Request) {
 	// swagger:route GET /api/v1/message/{ID}/raw message DownloadRawParams
@@ -189,29 +219,29 @@ func DownloadRaw(w http.ResponseWriter, r *http.Request) {
 	//    400: ErrorResponse
 	//    404: NotFoundResponse
 
-	id := r.PathValue("id")
 	dl := r.FormValue("dl") // #nosec G120 -- GET request, FormValue only parses URL query string
+	serveRaw(w, r, dl == "1")
+}
 
-	if id == "latest" {
-		var err error
-		id, err = storage.LatestID(r)
-		if err != nil {
-			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-			w.WriteHeader(404)
-			_, _ = fmt.Fprint(w, err.Error()) // #nosec G705 -- served as text/plain
-			return
-		}
-	}
+// DownloadEML (method: GET) returns the full email source as an .eml attachment
+func DownloadEML(w http.ResponseWriter, r *http.Request) {
+	// swagger:route GET /api/v1/message/{ID}/eml message DownloadEMLParams
+	//
+	// # Download message as EML
+	//
+	// Returns the full email source as a downloadable .eml file.
+	//
+	// The ID can be set to `latest` to return the latest message.
+	//
+	//	Produces:
+	//	  - message/rfc822
+	//
+	//	Schemes: http, https
+	//
+	//	Responses:
+	//	  200: TextResponse
+	//    400: ErrorResponse
+	//    404: NotFoundResponse
 
-	data, err := storage.GetMessageRaw(id)
-	if err != nil {
-		fourOFour(w)
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	if dl == "1" {
-		w.Header().Set("Content-Disposition", "attachment; filename=\""+id+".eml\"")
-	}
-	_, _ = w.Write(data) // #nosec G705 -- raw email source served as text/plain, not rendered as HTML
+	serveRaw(w, r, true)
 }

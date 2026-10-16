@@ -38,6 +38,15 @@ type downloadRawParams struct {
 	ID string
 }
 
+// swagger:parameters DownloadEMLParams
+type downloadEMLParams struct {
+	// Message database ID or "latest"
+	//
+	// in: path
+	// required: true
+	ID string
+}
+
 // swagger:parameters GetMessageParams
 type getMessageParams struct {
 	// Message database ID or "latest"
